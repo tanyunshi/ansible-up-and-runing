@@ -1,0 +1,31 @@
+---
+- name: set the nginx config file
+  template:
+    src=nginx.conf.j2
+    dest=/etc/nginx/sites-available/mezzanine.conf
+  notify:
+    restart nginx
+  become: True
+
+- name: enable the nginx conf file
+  file:
+    src: /etc/nginx/sites-available/mezzanine.conf
+    dest: /etc/nginx/sites-enabled/mezzanine.conf
+    state: link
+  become: True
+  notify: restart nginx
+
+- name: remove the default nginx config file
+  file: path=/etc/nginx/sites-enabled/default state=absent
+  notify: restart nginx
+  become: True
+
+- name: create tls certificates
+  command: >
+    openssl req -new -x509 -nodes -out {{ mezzanie_proj_name }}.crt
+    -keyout {{ mezzanie_proj_name }}.key -subj '/CN={{ domains[0] }}' -days 3650
+    chdir={{ comezzanie_conf_path }}
+    creates={{ mezzanie_conf_path }}/{{ mezzanie_proj_name }}.crt
+  become: True
+  when: tls_enabled
+  notify: restart nginx
